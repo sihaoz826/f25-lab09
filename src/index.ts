@@ -14,8 +14,10 @@ function detectFace(fileName: string) {
             if (logo.score)
                 scores.push(logo.score);
         });
-        const avg = scores.reduce((a, b) => a + b) / scores.length;
-        console.log(`Average score for ${fileName}: ${avg}`);
+        if (scores.length > 0) {
+            const avg = scores.reduce((a, b) => a + b) / scores.length;
+            console.log(`Average score for ${fileName}: ${avg}`);
+        }
     })
     .catch((err) => {
         if (err.code == 'ENOENT')
@@ -56,20 +58,46 @@ function main (fileNames: string[]): void {
 // Implement the async version of the above here
 // Your version should not use .then and should use try/catch instead of .catch
 async function mainAsync(fileNames: string[]): Promise<void> {
-    console.error(new Error("mainAsync not implemented"));
-    // Your code here
+    for (const fileName of fileNames) {
+        try {
+            console.log(`Running logo detection on ${fileName}`);
+            const [result] = await client.logoDetection(fileName);
+            let scores: number[] = [];
+            const logos = result.logoAnnotations;
+            logos?.forEach((logo) => {
+                if (logo.description)
+                    console.log(`"${logo.description}" found in in file ${fileName}`);
+                if (logo.score)
+                    scores.push(logo.score);
+            });
+            if (scores.length > 0) {
+                const avg = scores.reduce((a, b) => a + b) / scores.length;
+                console.log(`Average score for ${fileName}: ${avg}`);
+            }
+        } catch (err: any) {
+            if (err.code === 'ENOENT')
+                console.error(`File ${fileName} not found`);
+            else if (err.code == 7)
+                console.error(err.details);
+            else {
+                // Log any other errors so we can see what's wrong
+                console.error(`Error processing ${fileName}:`, err.message || err);
+                if (err.code) console.error(`Error code: ${err.code}`);
+            }
+        }
+    }
 }
 
-main([
-    './images/cmu.jpg', 
-    './images/logo-types-collection.jpg', 
-    './images/not-a-file.jpg'
-]);
+// main([
+//     './images/cmu.jpg', 
+//     './images/logo-types-collection.jpg', 
+//     './images/not-a-file.jpg'
+// ]);
 
 // Sleep for a second
 await new Promise(r => setTimeout(r, 1000));
 
-mainAsync([
+await mainAsync([
     './images/cmu.jpg', 
     './images/logo-types-collection.jpg', 
     './images/not-a-file.jpg'
